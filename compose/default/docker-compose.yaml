@@ -1,0 +1,39 @@
+version: "3"
+
+# since it's default configuration, we don't want
+# to use zeromq, rely on rf-frontend only
+
+services:
+  srsepc:
+    container_name: srsepc-default
+    build: ./../../
+    command: >
+      srsepc /config/epc.conf
+        --mme.mme_bind_addr=${EPC_ADDR}
+        --spgw.gtpu_bind_addr=${EPC_ADDR}
+    networks:
+      srsnet:
+        ipv4_address: ${EPC_ADDR}
+  
+  srsenb:
+    container_name: srsenb-default
+    build: ./../../
+    command: >
+      srsenb /config/enb.conf
+        --enb.mme_addr=${ENB_ADDR}
+        --enb.gtp_bind_addr=${ENB_ADDR}
+        --enb.s1c_bind_addr=${ENB_ADDR}
+    devices:
+      - "${RF_BUS}:${RF_BUS}"
+    networks:
+      srsnet:
+        ipv4_address: ${ENB_ADDR}
+    depends_on:
+      - srsepc
+
+networks:
+  srsnet:
+    ipam:
+      driver: default
+      config:
+        - subnet: ${SRS_SUBNET}

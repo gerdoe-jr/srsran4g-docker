@@ -1,0 +1,66 @@
+version: "3"
+
+# docker compose --env-file ./zmq.env up
+
+services:
+  srsepc:
+    container_name: srsepc-zmq
+    build: ./../../
+    command: >
+      srsepc /config/epc.conf
+        --mme.mme_bind_addr=${EPC_ADDR}
+        --spgw.gtpu_bind_addr=${EPC_ADDR}
+    networks:
+      srsnet:
+        ipv4_address: ${EPC_ADDR}
+    devices:
+      - /dev/net/tun
+    privileged: true
+  
+  srsenb:
+    container_name: srsenb-zmq
+    build: ./../../
+    command: >
+      srsenb /config/enb.conf
+        --rf.device_name=zmq
+        --enb.mme_addr=${ENB_ADDR}
+        --enb.gtp_bind_addr=${ENB_ADDR}
+        --enb.s1c_bind_addr=${ENB_ADDR}
+        --rf.device_args="
+          fail_on_disconnect=true,
+          tx_port=tcp://*:2000,
+          rx_port=tcp://localhost:2001,
+          id=enb,
+          base_srate=23.04e6
+        "
+    networks:
+      srsnet:
+        ipv4_address: ${ENB_ADDR}
+    privileged: true
+    depends_on:
+      - srsepc
+  
+  srsue:
+    container_name: srsue-zmq
+    build: ./../../
+    command: >
+      srsue /config/ue.conf
+        --rf.device_name=zmq
+        --rf.device_args="
+          tx_port=tcp://*:2001,
+          rx_port=tcp://localhost:2000,
+          id=ue,
+          base_srate=23.04e6
+        "
+    devices:
+      - /dev/net/tun
+    privileged: true
+    depends_on:
+      - srsenb
+
+networks:
+  srsnet:
+    ipam:
+      driver: default
+      config:
+        - subnet: ${SRS_SUBNET}

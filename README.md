@@ -1,3 +1,5 @@
+# outdated
+
 # Dockerized srsRAN 4G
 
 First of all you need to install Docker according to your OS instructions.
