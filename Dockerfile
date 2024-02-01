@@ -80,11 +80,11 @@ RUN ldconfig
 
 FROM ubuntu:jammy as srsran-base
 
+RUN apt update && apt install iputils-ping net-tools
+
 COPY --from=build /usr/local/ /usr/local/
 COPY --from=build /usr/bin/ /usr/bin/
 COPY --from=build /usr/lib/ /usr/lib/
 COPY --from=build /etc/ /etc/
-
-COPY ./config /config
 
 RUN ldconfig

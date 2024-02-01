@@ -8,9 +8,11 @@ services:
     container_name: srsepc-default
     build: ./../../
     command: >
-      srsepc /config/epc.conf
+      srsepc
         --mme.mme_bind_addr=${EPC_ADDR}
         --spgw.gtpu_bind_addr=${EPC_ADDR}
+    devices:
+      - /dev/net/tun
     networks:
       srsnet:
         ipv4_address: ${EPC_ADDR}
@@ -19,12 +21,13 @@ services:
     container_name: srsenb-default
     build: ./../../
     command: >
-      srsenb /config/enb.conf
-        --enb.mme_addr=${ENB_ADDR}
+      srsenb
+        --enb.mme_addr=${EPC_ADDR}
         --enb.gtp_bind_addr=${ENB_ADDR}
         --enb.s1c_bind_addr=${ENB_ADDR}
     devices:
-      - "${RF_BUS}:${RF_BUS}"
+      - /dev/net/tun
+      - ${RF_BUS}
     networks:
       srsnet:
         ipv4_address: ${ENB_ADDR}

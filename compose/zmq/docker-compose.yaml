@@ -7,36 +7,42 @@ services:
     container_name: srsepc-zmq
     build: ./../../
     command: >
-      srsepc /config/epc.conf
-        --mme.mme_bind_addr=${EPC_ADDR}
-        --spgw.gtpu_bind_addr=${EPC_ADDR}
+      srsepc
+        --mme.mme_bind_addr=${BS_EPC_ADDR}
+        --spgw.gtpu_bind_addr=${BS_EPC_ADDR}
     networks:
-      srsnet:
-        ipv4_address: ${EPC_ADDR}
+      bsnet:
+        ipv4_address: ${BS_EPC_ADDR}
+    cap_add:
+      - SYS_ADMIN
+      - NET_ADMIN
     devices:
       - /dev/net/tun
-    privileged: true
   
   srsenb:
     container_name: srsenb-zmq
     build: ./../../
     command: >
-      srsenb /config/enb.conf
+      srsenb
         --rf.device_name=zmq
-        --enb.mme_addr=${ENB_ADDR}
-        --enb.gtp_bind_addr=${ENB_ADDR}
-        --enb.s1c_bind_addr=${ENB_ADDR}
+        --enb.mme_addr=${BS_EPC_ADDR}
+        --enb.gtp_bind_addr=${BS_ENB_ADDR}
+        --enb.s1c_bind_addr=${BS_ENB_ADDR}
         --rf.device_args="
           fail_on_disconnect=true,
           tx_port=tcp://*:2000,
-          rx_port=tcp://localhost:2001,
+          rx_port=tcp://${UE_ENB_ADDR}:2001,
           id=enb,
           base_srate=23.04e6
         "
     networks:
-      srsnet:
-        ipv4_address: ${ENB_ADDR}
-    privileged: true
+      bsnet:
+        ipv4_address: ${BS_ENB_ADDR}
+      uenet:
+        ipv4_address: ${UE_ENB_ADDR}
+    cap_add:
+      - SYS_ADMIN
+      - NET_ADMIN
     depends_on:
       - srsepc
   
@@ -44,23 +50,33 @@ services:
     container_name: srsue-zmq
     build: ./../../
     command: >
-      srsue /config/ue.conf
+      srsue
         --rf.device_name=zmq
         --rf.device_args="
           tx_port=tcp://*:2001,
-          rx_port=tcp://localhost:2000,
+          rx_port=tcp://${UE_UE_ADDR}:2000,
           id=ue,
           base_srate=23.04e6
         "
+    networks:
+      uenet:
+        ipv4_address: ${UE_UE_ADDR}
+    cap_add:
+      - SYS_ADMIN
+      - NET_ADMIN
     devices:
       - /dev/net/tun
-    privileged: true
     depends_on:
       - srsenb
 
 networks:
-  srsnet:
+  bsnet:
     ipam:
       driver: default
       config:
-        - subnet: ${SRS_SUBNET}
+        - subnet: ${BS_SUBNET}
+  uenet:
+    ipam:
+      driver: default
+      config:
+        - subnet: ${UE_SUBNET}
